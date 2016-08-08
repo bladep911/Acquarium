@@ -1,22 +1,31 @@
 #include <LiquidCrystal.h>
-#include <OneWire.h> 
+#include <OneWire.h>
+#include <IRremote.h>
+
+#define RECV_PIN 8
+#define ON_BUTTON 0xFF629D
+#define OFF_BUTTON 0xFFA25D
+
 //Specifichiamo quali pin verranno utilizzati per gestire il Display specificandoli come di seguito LiquidCrystal(rs, rw, enable, d4, d5, d6, d7)
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 //Temperature chip i/o
 int DS18S20_Pin = 7; //DS18S20 Signal pin on digital 7
 int relayPin = 9; // Pin to control relay
-
 OneWire ds(DS18S20_Pin); // on digital pin 7
+IRrecv irrecv(RECV_PIN);
+decode_results results;
+bool autoFan;
 
 void setup() {
    Serial.begin(9600);
   //impostiamo il numero di colonne e di righe del nostro display 16x2
+  irrecv.enableIRIn();
+  
   lcd.begin(16, 2);
-  //visualizziamo nella prima riga a partire dalla prima colonna il messaggio 'Ciao Mondo'
   lcd.print("Temperatura ");
   lcd.print((char)223);
   lcd.print("C:");
-
+  autoFan = true;
   pinMode(relayPin, OUTPUT);
   digitalWrite(relayPin, LOW);
 }
@@ -33,13 +42,31 @@ void loop() {
 }
 
 void activeFan(int temp){
-  int state = bitRead(PORTD,relayPin);
-  if(temp >= 26 && state == LOW){
-    digitalWrite(relayPin, HIGH);
+   if (irrecv.decode(&results)) {  //If IR receive results are detected
+      Serial.println(results.value, HEX);
+      switch (results.value) {
+        //Power
+        case ON_BUTTON:
+           digitalWrite(relayPin, HIGH);
+           autoFan = false;
+           break;
+        case OFF_BUTTON:
+           digitalWrite(relayPin, LOW);
+           autoFan = true;
+           break;
+      }
   }
   
-  if(temp <= 25.5 && state == HIGH){
-    digitalWrite(relayPin, LOW);
+  if(autoFan){
+    //check if manual mode
+    int state = bitRead(PORTD,relayPin);
+    if(temp >= 26 && state == LOW){
+      digitalWrite(relayPin, HIGH);
+    }
+    
+    if(temp <= 25.5 && state == HIGH){
+      digitalWrite(relayPin, LOW);
+    }
   }
 }
 
