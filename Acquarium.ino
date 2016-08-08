@@ -69,6 +69,7 @@ void loop() {
   lcd.setCursor(0, 1);
   //visualizza i secondi dall'inizio dell'avvio di arduino
   lcd.print(temperature);
+  delat(500);
 }
 
 void activeFan(int temp){
@@ -85,6 +86,7 @@ void activeFan(int temp){
            autoFan = true;
            break;
       }
+	  irrecv.resume();
   }
   
   if(autoFan){
